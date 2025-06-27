@@ -1,15 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import pino from "pino";
 import pinoHttp from "pino-http";
 
+import logger from "@/common/utils/logger";
 import { env } from "@/common/utils/envConfig";
-
-const logger = pino({
-	level: env.isProduction ? "info" : "debug",
-	transport: env.isProduction ? undefined : { target: "pino-pretty" },
-});
 
 const getLogLevel = (status: number) => {
 	if (status >= StatusCodes.INTERNAL_SERVER_ERROR) return "error";
@@ -32,15 +27,17 @@ const httpLogger = pinoHttp({
 	logger,
 	genReqId: (req) => req.headers["x-request-id"] as string,
 	customLogLevel: (_req, res) => getLogLevel(res.statusCode),
-	customSuccessMessage: (req) => `${req.method} ${req.url} completed`,
-	customErrorMessage: (_req, res) => `Request failed with status code: ${res.statusCode}`,
-	// Only log response bodies in development
+	customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
+	customErrorMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
 	serializers: {
 		req: (req) => ({
 			method: req.method,
 			url: req.url,
-			id: req.id,
+			id: req.id
 		}),
+		res: (res) => ({
+			statusCode: res.statusCode
+		})
 	},
 });
 
@@ -55,4 +52,4 @@ const captureResponseBody = (req: Request, res: Response, next: NextFunction) =>
 	next();
 };
 
-export default [addRequestId, captureResponseBody, httpLogger];
+export default [addRequestId, httpLogger, captureResponseBody];

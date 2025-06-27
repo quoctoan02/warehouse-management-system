@@ -1,19 +1,33 @@
+import { app } from "@/server";
 import { env } from "@/common/utils/envConfig";
-import { app, logger } from "@/server";
+import logger from "@/common/utils/logger";
 
-const server = app.listen(env.PORT, () => {
-	const { NODE_ENV, HOST, PORT } = env;
-	logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
+const { HOST, PORT, NODE_ENV } = env;
+
+logger.info('Khởi động server...');
+logger.info(`Environment: ${NODE_ENV}`);
+logger.info(`Host: ${HOST}`);
+logger.info(`Port: ${PORT}`);
+
+app.listen(PORT, HOST, () => {
+	logger.info(`Server (${NODE_ENV}) running on http://${HOST}:${PORT}`);
+	logger.info('API Documentation: http://${HOST}:${PORT}/docs');
+	logger.info('Health Check: http://${HOST}:${PORT}/health-check');
 });
 
-const onCloseSignal = () => {
-	logger.info("sigint received, shutting down");
-	server.close(() => {
-		logger.info("server closed");
-		process.exit();
-	});
-	setTimeout(() => process.exit(1), 10000).unref(); // Force shutdown after 10s
+const gracefulShutdown = (signal: string) => {
+	logger.warn(`Nhận tín hiệu ${signal}, đang shutdown server...`);
+	process.exit(0);
 };
 
-process.on("SIGINT", onCloseSignal);
-process.on("SIGTERM", onCloseSignal);
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+
+process.on('uncaughtException', (error) => {
+	logger.error('Uncaught Exception', error);
+	process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+	logger.error('Unhandled Promise Rejection', { reason, promise });
+});

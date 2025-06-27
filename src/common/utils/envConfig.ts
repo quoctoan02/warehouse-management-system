@@ -4,7 +4,7 @@ import { z } from "zod";
 dotenv.config();
 
 const envSchema = z.object({
-	NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
+	NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
 	HOST: z.string().min(1).default("localhost"),
 
